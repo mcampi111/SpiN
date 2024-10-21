@@ -13,7 +13,7 @@ The paper has multiple contributions, at both methodological and applied level:
 
 ## Motivations For this Study
 
-This study introduces....
+This study introduces the Campi-Peters-Buhl-Morvan-Thai-Van (CPBMT) model, a specific type of state-space structured model. Similar to the widely used Lee-Carter model \cite{lee1992modeling} in demography for mortality rate forecasting and the Nelson-Siegel model in interest rate finance \cite{nelson1987parsimonious}, the CPBMT model leverages established methodologies to analyze hearing loss patterns and provides a population-level standardized reference benchmark of age-sex-frequency and age-hearing-loss-degree-frequency specific risk profiles. The formulation of the model involves constructing hearing loss proportions as well as speech-in-noise and speech-in-quiet proportions. Two models are considered: a baseline model based solely on the audiogram and an extended model incorporating the speech tests.
 
 
 ## Organization of the Repository
