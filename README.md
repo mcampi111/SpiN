@@ -1,5 +1,5 @@
 # SpiN
-Repository with data and code of the paper "Standardised Hearing Loss Risk Profiles with State-Space Models"
+Repository with data and code of the paper **"Standardised Hearing Loss Risk Profiles with State-Space Models"** available at..
 
 ## **Abstract**
 
@@ -30,11 +30,11 @@ This folder contains the R files derived during the analysis.
 
 1. **CPBMT_Data_Analysis_v2.R**. This file containes all the preliminary analysis for data cleaning and descriptive statistics plots.
 2. **CPBMT_Model_Selection.R**. This file containes performs the model selection computing the Mean Square Error for different models (i.e. considering different age groups) as well as the model performance measures provided in the main body of the paper.
-3. **CPBMT_Part_Reg.R**. This file performs ....
-4. **CPBMT_Plots.R**. This file containes .....
-5. **CPBMT_Residuals_Mod_Assessment.R**. This file containes .....
-6. **CPBMT_Stat_Tests.R**. This file containes .....
-7. **utils.R**. This file containes .....
+3. **CPBMT_Part_Reg.R**. This file performs the partial linear regression presented in the paper.
+4. **CPBMT_Plots.R**. This file containes the code used to generate the explanatory plots and the results plots presented in the main body of the paper.
+5. **CPBMT_Residuals_Mod_Assessment.R**. This file containes the code used for the residual model assessments presented in the Supplementary Information.
+6. **CPBMT_Stat_Tests.R**. This file containes the code used to perform the LRT and the Vuong tests provided both in the main body of the paper as well as in the Supplementary Information.
+7. **utils.R**. This file containes all the utils and functions required to perform the entire model fit and anyalysis of the paper.
 
 
 ```diff
