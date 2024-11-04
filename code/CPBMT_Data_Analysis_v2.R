@@ -32,11 +32,11 @@ library(Rtsne)
 # SET DIRECTORY AND READ FILE #
 ###############################
 
-source("/Users/mcampi/Desktop/Hung_Joanna/code/utils.R")
+source(".code/utils.R")
 
-mydir <- "/Users/mcampi/Desktop/Hung_Joanna/data/"
-mydir2 <- "/Users/mcampi/Desktop/Hung_Joanna/code/"
-mydir_figs <- "/Users/mcampi/Desktop/Hung_Joanna/code/figs/"
+mydir <- "./data/"
+mydir2 <- "./code/"
+mydir_figs <- "./code/figs/"
 
 result <- prepare_data(mydir, mydir2, mydir_figs)
 
