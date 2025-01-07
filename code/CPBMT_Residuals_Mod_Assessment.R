@@ -24,10 +24,10 @@ library(tseries)
 # SET DIRECTORY AND READ FILE #
 ###############################
 
-mydir<- "./data/"
-mydir2<- "./code/"
+mydir<- "/Users/mcampi/Desktop/Hung_Joanna/data/"
+mydir2<- "/Users/mcampi/Desktop/Hung_Joanna/code/"
 
-mydir_figs = "./code/figs/"
+mydir_figs = "/Users/mcampi/Desktop/Hung_Joanna/code/figs/"
 
 
 source(paste(mydir2, "utils.R", sep = "")) 

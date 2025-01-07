@@ -23,11 +23,11 @@ library(tseries)
 # SET DIRECTORY AND READ FILE #
 ###############################
 
-source("./code/utils.R")
+source("/Users/mcampi/Desktop/Hung_Joanna/code/utils.R")
 
-mydir <- "./data/"
-mydir2 <- "./code/"
-mydir_figs <- "./code/figs/"
+mydir <- "/Users/mcampi/Desktop/Hung_Joanna/data/"
+mydir2 <- "/Users/mcampi/Desktop/Hung_Joanna/code/"
+mydir_figs <- "/Users/mcampi/Desktop/Hung_Joanna/code/figs/"
 
 result <- prepare_data(mydir, mydir2, mydir_figs)
 
@@ -178,10 +178,10 @@ loglike_base_hl <- lapply(1:n_tresh, function(i) {
   beta_a <- model_hl[[i]]$bx
   theta_f <- coef(ar1_hl_model[[i]])[[2]]
   phi_1 <- coef(ar1_hl_model[[i]])[[1]]
-  sigma2_epsilon <- apply(model_hl[[i]]$residuals$y, 2, var) 
-  sigma2_omega_f <- var(ar1_hl_model[[i]]$residuals) 
-  kappa_0 <- as.numeric(model_hl[[i]]$kt) 
-  P_0 <- 1.0 
+  sigma2_epsilon <- apply(model_hl[[i]]$residuals$y, 2, var) #0.1 #Discuss --> sigma_epsilon
+  sigma2_omega_f <- var(ar1_hl_model[[i]]$residuals) #0.1 #Discuss --> sigma_omega
+  kappa_0 <- as.numeric(model_hl[[i]]$kt) #modify the function cause you have k and you change sigma and P
+  P_0 <- 1.0 #Discuss
   
   result <- baseline_kalman_filter_log_likelihood(Y, alpha_a, beta_a, 
                                                   theta_f, phi_1, sigma2_epsilon,
@@ -200,15 +200,15 @@ loglike_extended_hl <- lapply(1:n_tresh, function(i) {
   beta_a <- model_hl[[i]]$bx
   theta_f <- coef(ar1_hl_model[[i]])[[2]]
   phi_1 <- coef(ar1_hl_model[[i]])[[1]]
-  sigma2_epsilon <- apply(model_hl[[i]]$residuals$y, 2, var) 
-  sigma2_omega_f <- var(ar1_hl_model[[i]]$residuals) 
-  kappa_0 <- as.numeric(model_hl[[i]]$kt) 
-  P_0 <- 1.0 
+  sigma2_epsilon <- apply(model_hl[[i]]$residuals$y, 2, var) #0.1 #Discuss --> sigma_epsilon
+  sigma2_omega_f <- var(ar1_hl_model[[i]]$residuals) #0.1 #Discuss --> sigma_omega
+  kappa_0 <- as.numeric(model_hl[[i]]$kt) #modify the function cause you have k and you change sigma and P
+  P_0 <- 1.0 #Discuss
   
   gamma_v = coef(partial_step_FWL_hl[[i]])[2,]
-  gamma_w = NULL
+  gamma_w = NULL#coef(partial_step_FWL_hl[[i]])[3,]
   v = spiq_rates[[1]][[i]]
-  w = NULL
+  w = NULL#spin_rates[[1]][[i]]
   
   
   result <- extended_kalman_filter_log_likelihood(Y, 
@@ -220,7 +220,8 @@ loglike_extended_hl <- lapply(1:n_tresh, function(i) {
                                                   sigma2_omega_f, 
                                                   gamma_v, v,
                                                   gamma_w, w,
-                                                  my_kappa = kappa_0,
+                                                  my_kappa = kappa_0,#kappa_0, 
+                                                  #v_0, w_0, 
                                                   P_0)
   return(result)
 })
@@ -244,10 +245,10 @@ loglike_base_age_hl <- lapply(1:n_tresh, function(i) {
     beta_a <- model_by_age_hl[[i]][[j]]$bx
     theta_f <- coef(ar1_age_hl_model[[i]][[j]])[[2]]
     phi_1 <- coef(ar1_age_hl_model[[i]][[j]])[[1]]
-    sigma2_epsilon <- apply(model_by_age_hl[[i]][[j]]$residuals$y, 2, var) 
-    sigma2_omega_f <- var(ar1_age_hl_model[[i]][[j]]$residuals) 
-    kappa_0 <- as.numeric(model_by_age_hl[[i]][[j]]$kt) 
-    P_0 <- 1.0 
+    sigma2_epsilon <- apply(model_by_age_hl[[i]][[j]]$residuals$y, 2, var) #0.1 #Discuss --> sigma_epsilon
+    sigma2_omega_f <- var(ar1_age_hl_model[[i]][[j]]$residuals) #0.1 #Discuss --> sigma_omega
+    kappa_0 <- as.numeric(model_by_age_hl[[i]][[j]]$kt) #modify the function cause you have k and you change sigma and P
+    P_0 <- 1.0 #Discuss
     
     result <- baseline_kalman_filter_log_likelihood(Y, alpha_a, beta_a, 
                                                     theta_f, phi_1, sigma2_epsilon,
@@ -268,15 +269,15 @@ loglike_extended_age_hl <- lapply(1:n_tresh, function(i) {
     beta_a <- model_by_age_hl[[i]][[j]]$bx
     theta_f <- coef(ar1_age_hl_model[[i]][[j]])[[2]]
     phi_1 <- coef(ar1_age_hl_model[[i]][[j]])[[1]]
-    sigma2_epsilon <- apply(model_by_age_hl[[i]][[j]]$residuals$y, 2, var) 
-    sigma2_omega_f <- var(ar1_age_hl_model[[i]][[j]]$residuals) 
-    kappa_0 <- as.numeric(model_by_age_hl[[i]][[j]]$kt) 
-    P_0 <- 1.0 
+    sigma2_epsilon <- apply(model_by_age_hl[[i]][[j]]$residuals$y, 2, var) #0.1 #Discuss --> sigma_epsilon
+    sigma2_omega_f <- var(ar1_age_hl_model[[i]][[j]]$residuals) #0.1 #Discuss --> sigma_omega
+    kappa_0 <- as.numeric(model_by_age_hl[[i]][[j]]$kt) #modify the function cause you have k and you change sigma and P
+    P_0 <- 1.0 #Discuss
     
     gamma_v = coef(partial_step_FWL_age_hl[[i]][[j]])[2,]
-    gamma_w = coef(partial_step_FWL_age_hl[[i]][[j]])[3,] 
+    gamma_w = coef(partial_step_FWL_age_hl[[i]][[j]])[3,] #NULL
     v = spiq_rates[[2]][[i]][[j]]
-    w = spin_rates[[2]][[i]][[j]] 
+    w = spin_rates[[2]][[i]][[j]] #NULL
     
     
     result <- extended_kalman_filter_log_likelihood(Y, 
@@ -288,7 +289,8 @@ loglike_extended_age_hl <- lapply(1:n_tresh, function(i) {
                                                     sigma2_omega_f, 
                                                     gamma_v, v,
                                                     gamma_w, w,
-                                                    my_kappa = kappa_0,
+                                                    my_kappa = kappa_0,#kappa_0, 
+                                                    #v_0, w_0, 
                                                     P_0)
     return(result)
   })
@@ -311,10 +313,10 @@ loglike_base_sex <- lapply(1:n_tresh, function(i) {
     beta_a <- model_by_age_sex[[i]][[j]]$bx
     theta_f <- coef(ar1_sex_model[[i]][[j]])[[2]]
     phi_1 <- coef(ar1_sex_model[[i]][[j]])[[1]]
-    sigma2_epsilon <- apply(model_by_age_sex[[i]][[j]]$residuals$y, 2, var) 
-    sigma2_omega_f <- var(ar1_sex_model[[i]][[j]]$residuals) 
-    kappa_0 <- as.numeric(model_by_age_sex[[i]][[j]]$kt) 
-    P_0 <- 1.0 
+    sigma2_epsilon <- apply(model_by_age_sex[[i]][[j]]$residuals$y, 2, var) #0.1 #Discuss --> sigma_epsilon
+    sigma2_omega_f <- var(ar1_sex_model[[i]][[j]]$residuals) #0.1 #Discuss --> sigma_omega
+    kappa_0 <- as.numeric(model_by_age_sex[[i]][[j]]$kt) #modify the function cause you have k and you change sigma and P
+    P_0 <- 1.0 #Discuss
     
     result <- baseline_kalman_filter_log_likelihood(Y, alpha_a, beta_a, 
                                                     theta_f, phi_1, sigma2_epsilon,
@@ -335,15 +337,15 @@ loglike_extended_sex <- lapply(1:n_tresh, function(i) {
     beta_a <- model_by_age_sex[[i]][[j]]$bx
     theta_f <- coef(ar1_sex_model[[i]][[j]])[[2]]
     phi_1 <- coef(ar1_sex_model[[i]][[j]])[[1]]
-    sigma2_epsilon <- apply(model_by_age_sex[[i]][[j]]$residuals$y, 2, var) 
-    sigma2_omega_f <- var(ar1_sex_model[[i]][[j]]$residuals) 
-    kappa_0 <- as.numeric(model_by_age_sex[[i]][[j]]$kt) 
-    P_0 <- 1.0 
+    sigma2_epsilon <- apply(model_by_age_sex[[i]][[j]]$residuals$y, 2, var) #0.1 #Discuss --> sigma_epsilon
+    sigma2_omega_f <- var(ar1_sex_model[[i]][[j]]$residuals) #0.1 #Discuss --> sigma_omega
+    kappa_0 <- as.numeric(model_by_age_sex[[i]][[j]]$kt) #modify the function cause you have k and you change sigma and P
+    P_0 <- 1.0 #Discuss
     
     gamma_v = coef(partial_step_FWL_age_sex[[i]][[j]])[2,]
-    gamma_w = coef(partial_step_FWL_age_sex[[i]][[j]])[3,] 
+    gamma_w = coef(partial_step_FWL_age_sex[[i]][[j]])[3,] #NULL
     v = spiq_rates[[3]][[i]][[j]]
-    w = spin_rates[[3]][[i]][[j]] 
+    w = spin_rates[[3]][[i]][[j]] #NULL
     
     
     result <- extended_kalman_filter_log_likelihood(Y, 
@@ -355,7 +357,8 @@ loglike_extended_sex <- lapply(1:n_tresh, function(i) {
                                                     sigma2_omega_f, 
                                                     gamma_v, v,
                                                     gamma_w, w,
-                                                    my_kappa = kappa_0,
+                                                    my_kappa = kappa_0,#kappa_0, 
+                                                    #v_0, w_0, 
                                                     P_0)
     return(result)
   })

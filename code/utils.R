@@ -13,7 +13,7 @@ library(fds)
 library(tidyr)
 library(viridis)
 library(patchwork)
-
+library(scales)
 
 #########
 # Utils #
@@ -63,12 +63,14 @@ prepare_data <- function(mydir, mydir2, mydir_figs) {
   all_age_groups <- levels(data_lee_carter$age_group3)
   n_age_g3 <- length(all_age_groups)
   
-  decision_threshold <- as.data.frame(cbind(data_ampl2$PTA, 
-                                            data_ampl2$SRT, data_ampl2$SNR))
+  decision_threshold <- data.frame(PTA = data_ampl2$PTA, 
+                                   SRT = data_ampl2$SRT, 
+                                   SNR = data_ampl2$SNR)
   
   quant_tresh <- c(0.2, 0.4, 0.6, 0.8, 0.9)
   quant_PTA <- quantile(decision_threshold$PTA, 
-                        probs = quant_tresh, na.rm = TRUE) 
+                        probs = quant_tresh,
+                        na.rm = TRUE) 
   quant_SRT <- quantile(decision_threshold$SRT, 
                         probs = quant_tresh, na.rm = TRUE) 
   quant_SNR <- quantile(decision_threshold$SNR, 
@@ -95,9 +97,10 @@ prepare_data <- function(mydir, mydir2, mydir_figs) {
   thresh_colors = c("#F5F5F5", "#FFDDC1", "#FF8C69", "#FF6347", "#FF0000")
   hearing_loss_col = c("#D0F0C0","#A1D99B","#31A354","#006837","#004529") 
   
-  
+  sex_classes = c("Female", 'Male')
   
   list(
+    data_ampl2 = data_ampl2,
     data_lee_carter = data_lee_carter,
     spiq = spiq,
     spin = spin,
@@ -123,22 +126,57 @@ prepare_data <- function(mydir, mydir2, mydir_figs) {
     freq_tresh_plot = freq_tresh_plot,
     thresh_colors = thresh_colors,
     hearing_loss_col = hearing_loss_col,
-    n_tresh = n_tresh
+    n_tresh = n_tresh,
+    sex_classes = sex_classes
   )
 }
 
 
-process_matrix <- function(mat, thresholds) {
+# process_matrix <- function(mat, thresholds) {
+#   if (ncol(mat) == 17) {
+#     processed_list <- lapply(thresholds, function(threshold) {
+#       counts <- colSums(mat[, -c(1, 2, 14, 15, 16, 17)] > threshold)
+#       ratios <- counts / nrow(mat)
+#       return(ratios)
+#     })
+#   } else if (ncol(mat) == 7) {
+#     processed_list <- lapply(thresholds, function(threshold) {
+#       counts <- colSums(mat[, -c(1, 2, 4, 5, 6,7)] > threshold)
+#       ratios <- counts / nrow(mat)
+#       return(ratios)
+#     })
+#   } else {
+#     stop("Unexpected number of columns in 'mat'")
+#   }
+#   
+#   return(processed_list)
+# }
+
+process_matrix <- function(mat, thresholds, n_totals = NULL) {
   if (ncol(mat) == 17) {
     processed_list <- lapply(thresholds, function(threshold) {
       counts <- colSums(mat[, -c(1, 2, 14, 15, 16, 17)] > threshold)
-      ratios <- counts / nrow(mat)
+      
+      # If n_totals is provided, divide by the total, otherwise use nrow(mat)
+      if (!is.null(n_totals)) {
+        ratios <- counts / n_totals
+      } else {
+        ratios <- counts / nrow(mat)
+      }
+      
       return(ratios)
     })
   } else if (ncol(mat) == 7) {
     processed_list <- lapply(thresholds, function(threshold) {
       counts <- colSums(mat[, -c(1, 2, 4, 5, 6,7)] > threshold)
-      ratios <- counts / nrow(mat)
+      
+      # If n_totals is provided, divide by the total, otherwise use nrow(mat)
+      if (!is.null(n_totals)) {
+        ratios <- counts / n_totals
+      } else {
+        ratios <- counts / nrow(mat)
+      }
+      
       return(ratios)
     })
   } else {
@@ -148,21 +186,97 @@ process_matrix <- function(mat, thresholds) {
   return(processed_list)
 }
 
+# process_matrix2 <- function(mat, freq_tresh) {
+#   if (ncol(mat) == 17) {
+#     processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
+#       threshold <- freq_tresh[, thresh_col]
+#       counts <- colSums(mat[, -c(1, 2, 14, 15, 16, 17)] > threshold)
+#       ratios <- counts / nrow(mat)
+#       return(ratios)
+#     })
+#   } else if (ncol(mat) == 7) {
+#     processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
+#       threshold <- freq_tresh[, thresh_col]
+#       counts <- colSums(mat[, -c(1, 2, 4, 5, 6,7)] > threshold)
+#       ratios <- counts / nrow(mat)
+#       return(ratios)
+#     })
+#   } else {
+#     stop("Unexpected number of columns in 'freq_tresh'")
+#   }
+#   
+#   return(processed_list)
+# }
 
-process_matrix2 <- function(mat, freq_tresh) {
+
+
+# process_matrix_totals <- function(mat, freq_tresh) {
+#   if (ncol(mat) == 17) {
+#     processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
+#       threshold <- freq_tresh[, thresh_col]
+#       totals <- nrow(mat)
+#       return(totals)
+#     })
+#   } else if (ncol(mat) == 7) {
+#     processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
+#       threshold <- freq_tresh[, thresh_col]
+#       totals <- nrow(mat)
+#       return(totals)
+#     })
+#   } else {
+#     stop("Unexpected number of columns in 'freq_tresh'")
+#   }
+#   
+#   return(processed_list)
+# }
+# 
+# 
+# process_matrix_countsonly <- function(mat, freq_tresh) {
+#   if (ncol(mat) == 17) {
+#     processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
+#       threshold <- freq_tresh[, thresh_col]
+#       counts <- colSums(mat[, -c(1, 2, 14, 15, 16, 17)] > threshold)
+#       return(counts)
+#     })
+#   } else if (ncol(mat) == 7) {
+#     processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
+#       threshold <- freq_tresh[, thresh_col]
+#       counts <- colSums(mat[, -c(1, 2, 4, 5, 6,7)] > threshold)
+#       return(counts)
+#     })
+#   } else {
+#     stop("Unexpected number of columns in 'freq_tresh'")
+#   }
+#   
+#   return(processed_list)
+# }
+
+process_matrix_totals <- function(mat, freq_tresh, n_totals = NULL) {
   if (ncol(mat) == 17) {
     processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
       threshold <- freq_tresh[, thresh_col]
-      counts <- colSums(mat[, -c(1, 2, 14, 15, 16, 17)] > threshold)
-      ratios <- counts / nrow(mat)
-      return(ratios)
+      
+      # If n_totals is provided, use it; otherwise, use nrow(mat)
+      if (!is.null(n_totals)) {
+        totals <- n_totals
+      } else {
+        totals <- nrow(mat)
+      }
+      
+      return(totals)
     })
   } else if (ncol(mat) == 7) {
     processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
       threshold <- freq_tresh[, thresh_col]
-      counts <- colSums(mat[, -c(1, 2, 4, 5, 6,7)] > threshold)
-      ratios <- counts / nrow(mat)
-      return(ratios)
+      
+      # If n_totals is provided, use it; otherwise, use nrow(mat)
+      if (!is.null(n_totals)) {
+        totals <- n_totals
+      } else {
+        totals <- nrow(mat)
+      }
+      
+      return(totals)
     })
   } else {
     stop("Unexpected number of columns in 'freq_tresh'")
@@ -171,30 +285,7 @@ process_matrix2 <- function(mat, freq_tresh) {
   return(processed_list)
 }
 
-
-
-process_matrix_totals <- function(mat, freq_tresh) {
-  if (ncol(mat) == 17) {
-    processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
-      threshold <- freq_tresh[, thresh_col]
-      totals <- nrow(mat)
-      return(totals)
-    })
-  } else if (ncol(mat) == 7) {
-    processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
-      threshold <- freq_tresh[, thresh_col]
-      totals <- nrow(mat)
-      return(totals)
-    })
-  } else {
-    stop("Unexpected number of columns in 'freq_tresh'")
-  }
-  
-  return(processed_list)
-}
-
-
-process_matrix_countsonly <- function(mat, freq_tresh) {
+process_matrix_countsonly <- function(mat, freq_tresh, n_totals = NULL) {
   if (ncol(mat) == 17) {
     processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
       threshold <- freq_tresh[, thresh_col]
@@ -214,10 +305,46 @@ process_matrix_countsonly <- function(mat, freq_tresh) {
   return(processed_list)
 }
 
+process_matrix2 <- function(mat, freq_tresh, n_totals = NULL) {
+  if (ncol(mat) == 17) {
+    processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
+      threshold <- freq_tresh[, thresh_col]
+      counts <- colSums(mat[, -c(1, 2, 14, 15, 16, 17)] > threshold)
+      
+      # If n_totals is provided, divide by the total, otherwise use nrow(mat)
+      if (!is.null(n_totals)) {
+        ratios <- counts / n_totals
+      } else {
+        ratios <- counts / nrow(mat)
+      }
+      
+      return(ratios)
+    })
+  } else if (ncol(mat) == 7) {
+    processed_list <- lapply(seq_len(ncol(freq_tresh)), function(thresh_col) {
+      threshold <- freq_tresh[, thresh_col]
+      counts <- colSums(mat[, -c(1, 2, 4, 5, 6,7)] > threshold)
+      
+      # If n_totals is provided, divide by the total, otherwise use nrow(mat)
+      if (!is.null(n_totals)) {
+        ratios <- counts / n_totals
+      } else {
+        ratios <- counts / nrow(mat)
+      }
+      
+      return(ratios)
+    })
+  } else {
+    stop("Unexpected number of columns in 'freq_tresh'")
+  }
+  
+  return(processed_list)
+}
 
 process_data <- function(data, thresholds, age_group_var,
                          len_tresh, len_age, len_hl,
-                         process_func = process_matrix) {
+                         process_func = process_matrix2,
+                         n_totals) {
   
   data_by_age <- data %>%
     group_by(!!sym(age_group_var)) %>% group_split()
@@ -238,25 +365,35 @@ process_data <- function(data, thresholds, age_group_var,
         group_split(`SEXE`)
     })
   
-  hrates_age <- lapply(data_by_age, process_func, thresholds)
+  # Pass corresponding total for each age group
+  hrates_age <- lapply(seq_along(data_by_age), function(i) {
+    process_func(data_by_age[[i]], thresholds, n_totals = n_totals[i])
+  })
+  
   hrates_age_mat <- lapply(1:len_tresh, function(i) 
     do.call(rbind, lapply(hrates_age, "[[", i)))
   
+  # Pass corresponding total for each age group in hearing loss subgroups
   hrates_age_hl <- lapply(1:len_age, function(i) {
-    lapply(data_by_age_hl[[i]], process_func, thresholds)
+    lapply(data_by_age_hl[[i]], function(subgroup) {
+      process_func(subgroup, thresholds, n_totals = n_totals[i])
+    })
   })
   
-  hrates_age_hl_mat <-lapply(1:len_tresh, function(h)
+  hrates_age_hl_mat <- lapply(1:len_tresh, function(h)
     lapply(1:len_hl, function(j)
       do.call(rbind,
               lapply(1:len_age, function(i) 
                 hrates_age_hl[[i]][[j]][[h]]))))
   
+  # Pass corresponding total for each age group in sex subgroups
   hrates_age_sex <- lapply(1:len_age, function(i) {
-    lapply(data_by_age_sex[[i]], process_func, thresholds)
+    lapply(data_by_age_sex[[i]], function(subgroup) {
+      process_func(subgroup, thresholds, n_totals = n_totals[i])
+    })
   })
   
-  hrates_age_sex_mat <-lapply(1:len_tresh, function(h)
+  hrates_age_sex_mat <- lapply(1:len_tresh, function(h)
     lapply(1:2, function(j)
       do.call(rbind,
               lapply(1:len_age, function(i) 
@@ -266,6 +403,59 @@ process_data <- function(data, thresholds, age_group_var,
               hrates_age_hl_mat = hrates_age_hl_mat,
               hrates_age_sexl_mat = hrates_age_sex_mat))
 }
+
+# process_data <- function(data, thresholds, age_group_var,
+#                          len_tresh, len_age, len_hl,
+#                          process_func = process_matrix,
+#                          n_totals) {
+#   
+#   data_by_age <- data %>%
+#     group_by(!!sym(age_group_var)) %>% group_split()
+#   
+#   data_by_age_hl <- data %>%
+#     group_by(!!sym(age_group_var)) %>% 
+#     group_split() %>% 
+#     lapply(function(subgroup) {
+#       subgroup %>%
+#         group_split(`Classification`)
+#     })
+#   
+#   data_by_age_sex <- data %>%
+#     group_by(!!sym(age_group_var)) %>% 
+#     group_split() %>% 
+#     lapply(function(subgroup) {
+#       subgroup %>%
+#         group_split(`SEXE`)
+#     })
+#   
+#   hrates_age <- lapply(data_by_age, process_func, thresholds)
+#   hrates_age_mat <- lapply(1:len_tresh, function(i) 
+#     do.call(rbind, lapply(hrates_age, "[[", i)))
+#   
+#   hrates_age_hl <- lapply(1:len_age, function(i) {
+#     lapply(data_by_age_hl[[i]], process_func, thresholds)
+#   })
+#   
+#   hrates_age_hl_mat <-lapply(1:len_tresh, function(h)
+#     lapply(1:len_hl, function(j)
+#       do.call(rbind,
+#               lapply(1:len_age, function(i) 
+#                 hrates_age_hl[[i]][[j]][[h]]))))
+#   
+#   hrates_age_sex <- lapply(1:len_age, function(i) {
+#     lapply(data_by_age_sex[[i]], process_func, thresholds)
+#   })
+#   
+#   hrates_age_sex_mat <-lapply(1:len_tresh, function(h)
+#     lapply(1:2, function(j)
+#       do.call(rbind,
+#               lapply(1:len_age, function(i) 
+#                 hrates_age_sex[[i]][[j]][[h]]))))
+#   
+#   return(list(hrates_age_mat = hrates_age_mat, 
+#               hrates_age_hl_mat = hrates_age_hl_mat,
+#               hrates_age_sexl_mat = hrates_age_sex_mat))
+# }
 
 
 
@@ -301,7 +491,335 @@ interpolate_row_linear <- function(row) {
 }
 
 
+create_plot2 <- function() {
+  # Reshape freq_tresh_df to long format
+  freq_tresh_long <- freq_tresh_df %>%
+    rownames_to_column("Frequency") %>%
+    pivot_longer(cols = -Frequency, names_to = "Threshold", values_to = "ThresholdValue")
+  
+  # Prepare the data
+  plot_data <- data_long %>%
+    left_join(freq_tresh_long, by = "Frequency", relationship = "many-to-many") %>%
+    mutate(ExceedsThreshold = Value > ThresholdValue) %>%
+    group_by(age_group2, Frequency, Threshold, ExceedsThreshold) %>%
+    summarise(count = n(), .groups = 'drop') %>%
+    mutate(Frequency = factor(Frequency, levels = freq_vector, ordered = TRUE))  # Order frequencies
+  
+  # Create the plot
+  ggplot(plot_data, aes(x = age_group2, y = count, fill = ExceedsThreshold)) +
+    geom_bar(stat = "identity", position = "stack") +
+    facet_grid(Threshold ~ Frequency, scales = "free_y") +
+    theme_minimal() +
+    labs(x = "Age Group",
+         y = "Count",
+         fill = "Exceeds Empirical Quantile") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, 
+                                     size = 8),
+          axis.text.y = element_text(size = 8),
+          strip.text = element_text(size = 10),
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA),
+          legend.position = "bottom",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(color = "black", linewidth = 0.3)
+    ) +
+    scale_fill_manual(values = c("FALSE" = "skyblue", "TRUE" = "red")) +
+    scale_y_continuous(expand = c(0, 0.1)) +  # Add a little space at the top for labels if needed
+    scale_x_discrete(breaks = function(x) x[seq(1, length(x), 2)]) 
+}
 
+create_plot3 <- function() {
+  # Reshape freq_tresh_df to long format
+  freq_tresh_long <- freq_tresh_df %>%
+    rownames_to_column("Frequency") %>%
+    pivot_longer(cols = -Frequency, names_to = "Threshold", values_to = "ThresholdValue")
+  
+  # Prepare the data
+  plot_data <- data_long %>%
+    left_join(freq_tresh_long, by = "Frequency", relationship = "many-to-many") %>%
+    mutate(ExceedsThreshold = Value > ThresholdValue) %>%
+    group_by(age_group2, Frequency, Threshold, ExceedsThreshold, Classification) %>%
+    summarise(count = n(), .groups = 'drop')
+  
+  # Function to abbreviate classifications
+  abbreviate_classification <- function(x) {
+    case_when(
+      x == "Moderate" ~ "Mod.",
+      x == "Moderately severe" ~ "Mod. Sev.",
+      x == "Severe" ~ "Sev.",
+      TRUE ~ x
+    )
+  }
+  
+  plot_data <- plot_data %>%
+    mutate(
+      Classification = factor(Classification, levels = hl_classes, ordered = TRUE),
+      Classification = fct_relabel(Classification, abbreviate_classification),
+      Frequency = factor(Frequency, levels = freq_vector, ordered = TRUE)  # Order frequencies
+    )
+  
+  # Create the plot
+  ggplot(plot_data, aes(x = age_group2, y = count, fill = ExceedsThreshold)) +
+    geom_bar(stat = "identity", position = "stack") +
+    facet_grid(Classification + Threshold ~ Frequency, scales = "free_y", switch = "y") +
+    theme_minimal() +
+    labs(x = "Age Group",
+         y = "Count",
+         fill = "Exceeds Empirical Quantile") +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
+      strip.text = element_text(size = 9),
+      axis.text.y = element_text(size = 7),
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA),
+      legend.position = "bottom",
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(color = "black", linewidth = 0.3),
+      strip.placement = "outside",
+      strip.background = element_rect(fill = "white", colour = NA),
+      strip.text.y.left = element_text(angle = 0, hjust = 0.5, vjust = 0.5),
+      strip.text.y = element_text(angle = 270, hjust = 0.5, vjust = 0.5)
+    ) +
+    scale_fill_manual(values = c("FALSE" = "skyblue", "TRUE" = "red")) +
+    scale_y_continuous(
+      expand = c(0, 0.1),
+      breaks = function(x) max(x),  # Only show the maximum value
+      labels = scales::label_number(accuracy = 1)  # Format to whole numbers
+    ) +
+    scale_x_discrete(
+      breaks = function(x) x[seq(1, length(x), 2)]  # Show every other x-axis label
+    )
+}
+
+create_plot4 <- function() {
+  # Define the desired order of frequencies with expressions
+  freq_order <- c("125", "250", "500", "750", "1000", "1500", "2000", "3000", "4000", "6000", "8000", 
+                  expression(SRT[Q]), expression(SRT[N]))
+  
+  # Prepare frequency thresholds
+  freq_tresh_long <- freq_tresh_df %>%
+    rownames_to_column("Frequency") %>%
+    pivot_longer(cols = -Frequency, names_to = "Threshold", values_to = "ThresholdValue")
+  
+  # Prepare SRT and SNR thresholds
+  srt_tresh_long <- data.frame(
+    Frequency = "SRT",  # Keep original for data matching
+    Threshold = c("20%", "40%", "60%", "80%", "90%"),
+    ThresholdValue = treshold_SPIQ
+  )
+  
+  snr_tresh_long <- data.frame(
+    Frequency = "SNR",  # Keep original for data matching
+    Threshold = c("20%", "40%", "60%", "80%", "90%"),
+    ThresholdValue = treshold_SPIN
+  )
+  
+  # Combine all thresholds
+  all_tresh_long <- bind_rows(
+    freq_tresh_long,
+    srt_tresh_long,
+    snr_tresh_long
+  )
+  
+  # Prepare the data
+  srt_snr_data <- all_data %>%
+    dplyr::select(AGE, Classification, age_group, age_group2, age_group3, SEXE, SRT, SNR) %>%
+    pivot_longer(
+      cols = c(SRT, SNR), 
+      names_to = "Frequency", 
+      values_to = "Value"
+    )
+  
+  # Combine with original data_long
+  plot_data <- bind_rows(data_long, srt_snr_data) %>%
+    left_join(all_tresh_long, by = "Frequency", relationship = "many-to-many") %>%
+    mutate(
+      ExceedsThreshold = Value > ThresholdValue,
+      # Convert Frequency to factor with specified order
+      Frequency = factor(
+        case_when(
+          Frequency == "SRT" ~ "SRT[Q]",
+          Frequency == "SNR" ~ "SRT[N]",
+          TRUE ~ Frequency
+        ), 
+        levels = c("125", "250", "500", "750", "1000", "1500", "2000", "3000", "4000", "6000", "8000", 
+                   "SRT[Q]", "SRT[N]")
+      )
+    ) %>%
+    group_by(age_group2, Frequency, Threshold, ExceedsThreshold) %>%
+    summarise(count = n(), .groups = 'drop')
+  
+  # Create the plot
+  ggplot(plot_data, aes(x = age_group2, y = count, fill = ExceedsThreshold)) +
+    geom_bar(stat = "identity", position = "stack") +
+    facet_grid(Threshold ~ Frequency, 
+               labeller = labeller(
+                 Frequency = label_parsed  # This allows parsing of expressions
+               )) +
+    theme_minimal() +
+    labs(x = "Age Group",
+         y = "Count",
+         fill = "Exceeds Threshold") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+          axis.text.y = element_text(size = 8),
+          strip.text = element_text(size = 10),
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA),
+          legend.position = "bottom",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(color = "black", linewidth = 0.3)
+    ) +
+    scale_fill_manual(values = c("FALSE" = "skyblue", "TRUE" = "red")) +
+    scale_y_continuous(expand = c(0, 0.1)) +
+    scale_x_discrete(breaks = function(x) x[seq(1, length(x), 2)])
+}
+
+
+create_plot5 <- function() {
+  # Prepare frequency thresholds
+  freq_tresh_long <- freq_tresh_df %>%
+    rownames_to_column("Frequency") %>%
+    pivot_longer(cols = -Frequency, names_to = "Threshold", values_to = "ThresholdValue")
+  
+  # Prepare SRT and SNR thresholds
+  srt_tresh_long <- data.frame(
+    Frequency = "SRT",
+    Threshold = c("20%", "40%", "60%", "80%", "90%"),
+    ThresholdValue = treshold_SPIQ
+  )
+  
+  snr_tresh_long <- data.frame(
+    Frequency = "SNR",
+    Threshold = c("20%", "40%", "60%", "80%", "90%"),
+    ThresholdValue = treshold_SPIN
+  )
+  
+  # Combine all thresholds
+  all_tresh_long <- bind_rows(
+    freq_tresh_long,
+    srt_tresh_long,
+    snr_tresh_long
+  )
+  
+  # Prepare the data
+  srt_snr_data <- all_data %>%
+    dplyr::select(AGE, Classification, age_group, age_group2, age_group3, SEXE, SRT, SNR) %>%
+    pivot_longer(
+      cols = c(SRT, SNR), 
+      names_to = "Frequency", 
+      values_to = "Value"
+    )
+  
+  # Total population per age group
+  total_population <- all_data %>%
+    group_by(age_group2) %>%
+    summarise(total_count = n())
+  
+  # Combine with original data_long and calculate exceeding thresholds
+  plot_data <- bind_rows(data_long, srt_snr_data) %>%
+    left_join(all_tresh_long, by = "Frequency", relationship = "many-to-many") %>%
+    mutate(
+      ExceedsThreshold = Value > ThresholdValue,
+      Frequency = case_when(
+        Frequency == "SRT" ~ "SRT[Q]",
+        Frequency == "SNR" ~ "SRT[N]",
+        TRUE ~ Frequency
+      )
+    ) %>%
+    group_by(age_group2, Frequency, Threshold, ExceedsThreshold, Classification) %>%
+    summarise(count = n(), .groups = 'drop')
+  
+  # Ensure all combinations exist and fill FALSE counts
+  plot_data <- plot_data %>%
+    tidyr::complete(
+      nesting(age_group2, Frequency, Threshold),
+      Classification = unique(plot_data$Classification),
+      ExceedsThreshold = c(TRUE, FALSE),
+      fill = list(count = 0)
+    ) %>%
+    group_by(age_group2, Frequency, Threshold) %>%
+    mutate(
+      count = ifelse(ExceedsThreshold == FALSE, 
+                     total_population$total_count[total_population$age_group2 == first(age_group2)] - 
+                       sum(count[ExceedsThreshold == TRUE], na.rm = TRUE), 
+                     count)
+    ) %>%
+    ungroup()
+  
+  # Function to abbreviate classifications
+  abbreviate_classification <- function(x) {
+    case_when(
+      x == "Moderate" ~ "Mod.",
+      x == "Moderately severe" ~ "Mod. Sev.",
+      x == "Severe" ~ "Sev.",
+      TRUE ~ x
+    )
+  }
+  
+  plot_data <- plot_data %>%
+    mutate(
+      Classification = factor(Classification, levels = hl_classes, ordered = TRUE),
+      Classification = fct_relabel(Classification, abbreviate_classification),
+      Frequency = factor(Frequency, 
+                         levels = c(freq_vector, "SRT[Q]", "SRT[N]"), 
+                         ordered = TRUE)
+    )
+  
+  # Create the plot
+  ggplot(plot_data, aes(x = age_group2, y = count, fill = ExceedsThreshold)) +
+    geom_bar(stat = "identity", position = "stack") +
+    facet_grid(Classification + Threshold ~ Frequency, 
+               scales = "free_y", 
+               switch = "y", 
+               labeller = labeller(Frequency = label_parsed)) +
+    theme_minimal() +
+    labs(x = "Age Group",
+         y = "Count",
+         fill = "Exceeds Threshold") +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
+      strip.text = element_text(size = 9),
+      axis.text.y = element_text(size = 7),
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA),
+      legend.position = "bottom",
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(color = "black", linewidth = 0.3),
+      strip.placement = "outside",
+      strip.background = element_rect(fill = "white", colour = NA),
+      strip.text.y.left = element_text(angle = 0, hjust = 0.5, vjust = 0.5),
+      strip.text.y = element_text(angle = 270, hjust = 0.5, vjust = 0.5)
+    ) +
+    scale_fill_manual(values = c("FALSE" = "skyblue", "TRUE" = "red")) +
+    scale_y_continuous(
+      expand = c(0, 0.1),
+      breaks = function(x) max(x), # Only show the maximum value
+      labels = scales::label_number(accuracy = 1)  # Format to whole numbers
+    ) +
+    scale_x_discrete(
+      breaks = function(x) x[seq(1, length(x), 2)]  # Show every other x-axis label
+    )
+}
+
+# Function to multiply matrix by column vector
+multiply_matrix_by_vector <- function(matrix, vector) {
+  t(t(matrix) * as.vector(vector))
+}
+
+# Function to multiply corresponding elements
+multiply_lists <- function(list1, list2) {
+  if (is.list(list1) && is.list(list2)) {
+    Map(multiply_lists, list1, list2)
+  } else if (is.matrix(list1) && is.matrix(list2) && ncol(list2) == 1) {
+    multiply_matrix_by_vector(list1, list2)
+  } else {
+    stop("Unexpected data structure")
+  }
+}
 
 
 recursive_interpolation <- function(lst) {
@@ -1122,6 +1640,209 @@ plot_polar_heatmaps <- function(df_rates, spq_rqtes, spn_rates,
   return(list(gg1 = gg1, gg2 = gg2, 
               gg3 = gg3, gg4 = gg4))
 }
+
+
+
+plot_polar_heatmaps_adjusted <- function(df_rates, spq_rqtes, spn_rates,
+                                hl_classes, freq_vector, 
+                                len_tresh, age_group_var, threshold_hl,
+                                freq_plot, sex_classes) {
+  
+  # Prepare data for gg1 (polar plot)
+  melt_rates <- list()
+  
+  for (i in 1:len_tresh) { 
+    melt_rates[[i]] <- as.data.frame(cbind(df_rates[[1]][[i]],
+                                           spq_rqtes[[1]][[i]],
+                                           spn_rates[[1]][[i]])) 
+    colnames(melt_rates[[i]]) <- c(paste(freq_vector), "SRT", "SNR")
+    melt_rates[[i]]$age <- sapply(strsplit(age_group_var, "-"),
+                                  function(x) as.numeric(x[1])) 
+    melt_rates[[i]]$threshold <- freq_plot[i]
+  }
+  
+  melted_rates <- melt(melt_rates, id.vars = c("age", "threshold"))
+  
+  # Add angle for polar plot
+  melted_rates$angle <- as.numeric(as.factor(melted_rates$variable)) * (360 / length(unique(melted_rates$variable)))
+  
+  # gg1 - Polar heatmap with frequencies
+  gg1 <- ggplot(melted_rates, aes(x = angle, y = age, fill = value)) +
+    geom_tile() +
+    geom_textpath(data = melted_rates,
+                  aes(x = angle, y = max(age) + 10, label = variable), 
+                  color = "black", size = 3, linetype = 0) +
+    geom_hline(yintercept = 0:3 * 5, color = "gray90") +
+    coord_curvedpolar(theta = "x") +
+    scale_fill_gradient(low = "white", high = "blue") +
+    theme_minimal() +
+    facet_wrap(~threshold, ncol = 5) +
+    labs(fill = "Proportion", x = "Frequency", y = "Age") +
+    theme(
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(size = 10),
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(size = 12),
+      legend.position = "left"   #left
+    )
+  
+  # Prepare data for gg2 (polar plot with HL classes)
+  melt_rates2 <- list()
+  
+  for (i in 1:len_tresh) {
+    melt_rates2[[i]] <- list()
+    for (j in 1:length(hl_classes)) {
+      melt_rates2[[i]][[j]] <- as.data.frame(cbind(df_rates[[2]][[i]][[j]],
+                                                   spq_rqtes[[2]][[i]][[j]],
+                                                   spn_rates[[2]][[i]][[j]]))
+      colnames(melt_rates2[[i]][[j]]) <- c(paste(freq_vector), "SRT", "SNR")
+      melt_rates2[[i]][[j]]$age <- sapply(strsplit(age_group_var, "-"),
+                                          function(x) as.numeric(x[1]))
+      melt_rates2[[i]][[j]]$hl_classes <- hl_classes[j]
+      melt_rates2[[i]][[j]]$threshold <- freq_plot[i]
+    } 
+  }
+  
+  melted_rates2 <- melt(melt_rates2, id.vars = c('age', 'hl_classes', 'threshold'))
+  melted_rates2$hl_classes <- factor(melted_rates2$hl_classes, levels = hl_classes)
+  
+  melted_rates2$angle <- as.numeric(as.factor(melted_rates2$variable)) * (360 / length(unique(melted_rates2$variable)))
+  
+  # gg2 - Polar heatmap with HL classes
+  gg2 <- ggplot(melted_rates2, aes(x = angle, y = age, fill = value)) +
+    geom_tile() +
+    geom_textpath(data = melted_rates2,
+                  aes(x = angle, y = max(age) + 10, label = variable), 
+                  color = "black", size = 3, linetype = 0) +
+    geom_hline(yintercept = 0:3 * 5, color = "gray90") +
+    coord_curvedpolar(theta = "x") +
+    scale_fill_gradient(low = "white", high = "blue") +
+    theme_minimal() +
+    facet_grid(hl_classes ~ threshold) +
+    labs(fill = "Proportion", x = "Frequency", y = "Age") +
+    theme(
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(size = 10),
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(size = 12),
+      legend.position = "left"  #left
+    )
+  
+  # Prepare data for gg3 (polar plot with Sex classes)
+  melt_rates3 <- list()
+  
+  for (i in 1:len_tresh) {
+    melt_rates3[[i]] <- list()
+    for (j in 1:length(sex_classes)) {
+      melt_rates3[[i]][[j]] <- as.data.frame(cbind(df_rates[[3]][[i]][[j]],
+                                                   spq_rqtes[[3]][[i]][[j]],
+                                                   spn_rates[[3]][[i]][[j]]))
+      colnames(melt_rates3[[i]][[j]]) <- c(paste(freq_vector), "SRT", "SNR")
+      melt_rates3[[i]][[j]]$age <- sapply(strsplit(age_group_var, "-"),
+                                          function(x) as.numeric(x[1]))
+      melt_rates3[[i]][[j]]$sex_classes <- sex_classes[j]
+      melt_rates3[[i]][[j]]$threshold <- freq_plot[i]
+    } 
+  }
+  
+  melted_rates3 <- melt(melt_rates3, id.vars = c('age', 'sex_classes', 'threshold'))
+  melted_rates3$sex_classes <- factor(melted_rates3$sex_classes, levels = sex_classes)
+  
+  melted_rates3$angle <- as.numeric(as.factor(melted_rates3$variable)) * (360 / length(unique(melted_rates3$variable)))
+  
+  # gg3 - Polar heatmap with Sex classes
+  gg3 <- ggplot(melted_rates3, aes(x = angle, y = age, fill = value)) +
+    geom_tile() +
+    geom_textpath(data = melted_rates3,
+                  aes(x = angle, y = max(age) + 10, label = variable), 
+                  color = "black", size = 3, linetype = 0) +
+    geom_hline(yintercept = 0:3 * 5, color = "gray90") +
+    coord_curvedpolar(theta = "x") +
+    scale_fill_gradient(low = "white", high = "blue") +
+    theme_minimal() +
+    facet_grid(sex_classes ~ threshold) +
+    labs(fill = "Proportion", x = "Frequency", y = "Age") +
+    theme(
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(size = 10),
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(size = 12),
+      legend.position = "left"
+    )
+  
+  
+  melted_rates$label <- "Overall"
+  melted_rates2$label <- melted_rates2$hl_classes  
+  melted_rates3$label <- melted_rates3$sex_classes 
+  
+  melted_rates2 <- subset(melted_rates2, select = -hl_classes)
+  melted_rates3 <- subset(melted_rates3, select = -sex_classes)
+  melted_rates2 <- subset(melted_rates2, select = -L2)
+  melted_rates3 <- subset(melted_rates3, select = -L2)
+  
+  combined_data <- rbind(melted_rates, melted_rates2, melted_rates3)
+  combined_data$label <- factor(combined_data$label, 
+                                levels = c("Overall", 
+                                           sex_classes, 
+                                           hl_classes))
+  
+  # Calculate the range of values for each label and threshold
+  value_ranges <- combined_data %>%
+    group_by(label, threshold) %>%
+    summarise(min_value = min(value, na.rm = TRUE),
+              max_value = max(value, na.rm = TRUE),
+              .groups = "drop")
+  
+  # Create a function to rescale values within each facet
+  rescale_values <- function(x, old_min, old_max) {
+    if (all(is.na(x)) || old_min == old_max) {
+      rep(0.5, length(x))  # If all NA or min and max are the same, return 0.5 for all values
+    } else {
+      scales::rescale(x, to = c(0, 1), from = c(old_min, old_max))
+    }
+  }
+  
+  # Rescale the values within each facet
+  combined_data <- combined_data %>%
+    left_join(value_ranges, by = c("label", "threshold")) %>%
+    group_by(label, threshold) %>%
+    mutate(scaled_value = rescale_values(value, first(min_value), first(max_value))) %>%
+    ungroup()
+  
+  # Modify gg4
+  gg4 <- ggplot(combined_data, aes(x = angle, y = age, fill = scaled_value)) +
+    geom_tile() +
+    geom_textpath(aes(x = angle, y = max(age) + 10, label = variable), 
+                  color = "black", size = 3, linetype = 0) +
+    geom_hline(yintercept = 0:3 * 5, color = "gray90") +
+    coord_curvedpolar(theta = "x") +
+    scale_fill_gradient(low = "white", high = "blue", 
+                        labels = scales::percent_format()) +
+    theme_minimal() +
+    facet_grid(label ~ threshold, scales = "free") +
+    labs(fill = "Proportion", x = "Frequency", y = "Age") +
+    theme(
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(size = 10),
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(size = 12),
+      legend.position = "left"
+    )
+  
+  # Add custom labels to show the actual range for each facet
+  #gg4 <- gg4 +
+  #  geom_text(data = value_ranges,
+  #            aes(x = -Inf, y = -Inf, 
+  #                label = sprintf("Range: %.2f - %.2f", min_value, max_value)),
+  #            hjust = -0.1, vjust = -0.5, size = 3, inherit.aes = FALSE)
+  
+  # Return a list of all polar plots
+  return(list(gg1 = gg1, gg2 = gg2, 
+              gg3 = gg3, gg4 = gg4))
+}
+
+
+
 
 
 
@@ -1966,6 +2687,370 @@ plot_coeff_all <- function(model_hl, model_by_age_hl,
     scale_color_manual(values =  c("red", custom_colors)) +
     scale_linetype_manual(values = c("dotdash" = "dotdash", "solid" = "solid")) +
     guides(color = guide_legend(ncol = 6), linetype = "none")
+  
+  return(list(gg_k, gg_a, gg_b,
+              b_final, 
+              a_final,
+              k_final,
+              gg_k_unique, gg_a_unique, gg_b_unique,
+              a_final_20, b_final_20, k_final_20))
+}
+
+
+plot_coeff_all2 <- function(model_hl, model_by_age_hl, 
+                           n_tresh, n_hlclasses,
+                           hl_classes, age_group_var, 
+                           treshold_hearing_rate, 
+                           freq_vector,
+                           custom_colors,
+                           type) {
+  
+  hl_classes2 <- c("Overall", hl_classes)  # Ensure hl_classes is defined
+  
+  k_by_age_hl <- lapply(1:n_tresh, function(i) as.data.frame(
+    do.call(cbind, 
+            lapply(1:(n_hlclasses), 
+                   function(j) as.numeric(model_by_age_hl[[i]][[j]]$kt) ) 
+    )))
+  
+  for (i in 1:n_tresh) {
+    colnames(k_by_age_hl[[i]]) = hl_classes
+    k_by_age_hl[[i]]$frequency = as.numeric(freq_vector)
+    k_by_age_hl[[i]]$treshold = as.factor(treshold_hearing_rate[i])
+  }
+  
+  k_by_age_hl = do.call(rbind, k_by_age_hl)
+  
+  k_by_age_hl_melted = melt(k_by_age_hl, id.vars = c("treshold","frequency" ) )
+  colnames(k_by_age_hl_melted) = c ("treshold","frequency",
+                                    "HL degree",  "value")
+  
+  # Kappas
+  k_byage <- as.data.frame(do.call(cbind, lapply(1:n_tresh, function(i)
+    as.numeric(model_hl[[i]]$kt)) ))
+  colnames(k_byage) <- treshold_hearing_rate
+  k_byage$frequency <- as.numeric(freq_vector)
+  k_byage_melted <- melt(k_byage, id.vars = "frequency"  )
+  colnames(k_byage_melted) <- c ("frequency", "treshold",  "value")
+  k_byage_melted$`HL degree` <- "Overall"
+  k_byage_melted_reordered <- k_byage_melted %>%
+    dplyr::select(treshold, frequency, `HL degree`, value)
+  
+  k_final = rbind(k_byage_melted_reordered,
+                  k_by_age_hl_melted)
+  
+  k_final$`HL degree` <- factor(k_final$`HL degree`, levels = hl_classes2)
+  
+  k_final_20 <- k_final[k_final$treshold == "20%", ]
+  
+  gg_k <- ggplot(k_final, aes(x = frequency,
+                              y = scale(value), 
+                              group = `HL degree`,
+                              color = `HL degree`)) +
+    geom_line(aes(linetype = ifelse(`HL degree` == "Overall",
+                                    "dotdash", "solid")),
+              size = 0.9) +
+    facet_wrap(~treshold,
+               scales = "fixed",
+               #scales = "free", 
+               ncol = 5) +
+    labs(title = "",
+         x = "Frequency",
+         y = expression(kappa),
+         color = paste(type)) +
+    theme_bw() +  
+    theme(legend.position = "bottom",
+          plot.background = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.text = element_text(color = 'black'),
+          strip.background = element_rect(fill = 'white'),
+          axis.title.x = element_text(size = 16, face = "bold"),      
+          axis.title.y = element_text(size = 20, face = "bold"),     
+          legend.title = element_text(size = 14, face = "bold"),      
+          legend.text = element_text(size = 12))+
+    scale_color_manual(values = c("red", custom_colors))  + 
+    scale_linetype_manual(values = c("dotdash" = "dotdash", "solid" = "solid")) +
+    guides(color = guide_legend(ncol = 6), linetype = "none")
+  
+  gg_k_unique = ggplot(k_final_20, aes(x = frequency,
+                                       y = scale(value), 
+                                       group = `HL degree`,
+                                       color = `HL degree`)) +
+    geom_line(aes(linetype = ifelse(`HL degree` == "Overall",
+                                    "dotdash", "solid")),
+              size = 1.5) +
+    labs(title = "",
+         x = "Frequency",
+         y = expression(kappa),
+         color = paste(type)) +
+    theme_bw() +  
+    theme(legend.position = "bottom",
+          plot.background = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.text = element_text(color = 'black'),
+          strip.background = element_rect(fill = 'white'),
+          axis.title.x = element_text(size = 16, face = "bold"),      
+          axis.title.y = element_text(size = 20, face = "bold"),     
+          legend.title = element_text(size = 14, face = "bold"),      
+          legend.text = element_text(size = 12))+
+    scale_color_manual(values = c("red", custom_colors))  + 
+    scale_linetype_manual(values = c("dotdash" = "dotdash", "solid" = "solid")) +
+    guides(color = guide_legend(ncol = 6), linetype = "none")
+  
+  
+  a_by_age_hl <- lapply(1:n_tresh, function(i) as.data.frame(
+    do.call(cbind, 
+            lapply(1:(n_hlclasses), 
+                   function(j) as.numeric(model_by_age_hl[[i]][[j]]$ax) ) 
+    )))
+  
+  for (i in 1:n_tresh) {
+    colnames(a_by_age_hl[[i]]) = hl_classes
+    a_by_age_hl[[i]]$age = sapply(strsplit(age_group_var, "-"),
+                                  function(x) as.numeric(x[1]))
+    a_by_age_hl[[i]]$treshold = as.factor(treshold_hearing_rate[i])
+  }
+  
+  a_by_age_hl = do.call(rbind, a_by_age_hl)
+  
+  a_by_age_hl_melted = melt(a_by_age_hl, id.vars = c("treshold","age" )  )
+  colnames(a_by_age_hl_melted) = c ("treshold","age",  "HL degree",  
+                                    "value")
+  
+  a_byage <- as.data.frame(do.call(cbind, lapply(1:n_tresh,  function(i) 
+    as.numeric(model_hl[[i]]$ax)) ))
+  colnames(a_byage) <- treshold_hearing_rate
+  a_byage$age <-  sapply(strsplit(age_group_var, "-"), function(x)
+    as.numeric(x[1]))
+  a_byage_melted <- melt(a_byage, id.vars = "age"  )
+  colnames(a_byage_melted) <- c ("age", "treshold",  "value")
+  a_byage_melted$`HL degree` <- "Overall"
+  a_byage_melted_reordered <- a_byage_melted %>%
+    dplyr::select(treshold, age, `HL degree`, value)
+  
+  a_final = rbind(a_byage_melted_reordered,
+                  a_by_age_hl_melted)
+  
+  a_final$`HL degree` <- factor(a_final$`HL degree`, levels = hl_classes2)
+  
+  a_final_20 <- a_final[a_final$treshold == "20%", ]
+  
+  gg_a <- ggplot(a_final, aes(x = age, y = value, 
+                              group = `HL degree`,
+                              color = `HL degree`)) +
+    geom_line(aes(linetype = ifelse(`HL degree` == "Overall",
+                                    "dotdash", "solid")),
+              size = 0.9) + facet_wrap(~treshold, 
+                                       scales = "fixed",
+                                       #scales = "free",
+                                       ncol = 5) +
+    labs(title = "",
+         x = "Age",
+         y = expression(alpha),
+         color = paste(type)) +
+    theme_bw() +  
+    theme(legend.position = "bottom",
+          plot.background = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.text = element_text(color = 'black'),
+          strip.background = element_rect(fill = 'white'),
+          axis.title.x = element_text(size = 16, face = "bold"),      
+          axis.title.y = element_text(size = 20, face = "bold"),     
+          legend.title = element_text(size = 14, face = "bold"),      
+          legend.text = element_text(size = 12)    ) +
+    scale_color_manual(values =  c("red", custom_colors)) +
+    scale_linetype_manual(values = c("dotdash" = "dotdash", "solid" = "solid")) +
+    guides(color = guide_legend(ncol = 6), linetype = "none")
+  
+  gg_a_unique = ggplot(a_final_20, aes(x = age, y = value, 
+                                       group = `HL degree`,
+                                       color = `HL degree`)) +
+    geom_line(aes(linetype = ifelse(`HL degree` == "Overall",
+                                    "dotdash", "solid")),
+              size = 1.5) + 
+    labs(title = "",
+         x = "Age",
+         y = expression(alpha),
+         color = paste(type)) +
+    theme_bw() +  
+    theme(legend.position = "bottom",
+          plot.background = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.text = element_text(color = 'black'),
+          strip.background = element_rect(fill = 'white'),
+          axis.title.x = element_text(size = 16, face = "bold"),      
+          axis.title.y = element_text(size = 20, face = "bold"),     
+          legend.title = element_text(size = 14, face = "bold"),      
+          legend.text = element_text(size = 12)    ) +
+    scale_color_manual(values =  c("red", custom_colors)) +
+    scale_linetype_manual(values = c("dotdash" = "dotdash", "solid" = "solid")) +
+    guides(color = guide_legend(ncol = 6), linetype = "none")
+  
+  b_by_age_hl <- lapply(1:n_tresh, function(i) as.data.frame(
+    do.call(cbind, 
+            lapply(1:(n_hlclasses), 
+                   function(j) as.numeric(model_by_age_hl[[i]][[j]]$bx) ) 
+    )))
+  
+  for (i in 1:n_tresh) {
+    colnames(b_by_age_hl[[i]]) = hl_classes
+    b_by_age_hl[[i]]$age = sapply(strsplit(age_group_var, "-"), 
+                                  function(x) as.numeric(x[1]))
+    b_by_age_hl[[i]]$treshold = as.factor(treshold_hearing_rate[i])
+  }
+  
+  b_by_age_hl = do.call(rbind, b_by_age_hl)
+  
+  b_by_age_hl_melted = melt(b_by_age_hl, id.vars = c("treshold","age" )  )
+  colnames(b_by_age_hl_melted) = c ("treshold","age",  "HL degree",  "value")
+  
+  
+  b_byage <- as.data.frame(do.call(cbind, lapply(1:n_tresh,  function(i) 
+    as.numeric(model_hl[[i]]$bx)) ))
+  colnames(b_byage) <- treshold_hearing_rate
+  b_byage$age <-  sapply(strsplit(age_group_var, "-"), function(x)
+    as.numeric(x[1]))
+  b_byage_melted <- melt(b_byage, id.vars = "age"  )
+  colnames(b_byage_melted) <- c ("age", "treshold",  "value")
+  b_byage_melted$`HL degree` <- "Overall"
+  b_byage_melted_reordered <- b_byage_melted %>%
+    dplyr::select(treshold, age, `HL degree`, value)
+  
+  b_final = rbind(b_byage_melted_reordered,
+                  b_by_age_hl_melted)
+  
+  b_final$`HL degree` <- factor(b_final$`HL degree`, levels = hl_classes2)
+  
+  b_final_20 <- b_final[b_final$treshold == "20%", ]
+  
+  gg_b <- ggplot(b_final, aes(x = age, y = value, 
+                              group = `HL degree`, 
+                              color = `HL degree`)) +
+    geom_line(aes(linetype = ifelse(`HL degree` == "Overall",
+                                    "dotdash", "solid")),
+              size = 0.9) + 
+    facet_wrap(~treshold,  
+               scales = "fixed",
+               #scales = "free",
+               ncol = 5) +
+    labs(title = "",
+         x = "Age",
+         y = expression(beta),
+         color = paste(type)) +
+    theme_bw() +  
+    theme(legend.position = "bottom",
+          plot.background = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.text = element_text(color = 'black'),
+          strip.background = element_rect(fill = 'white'),
+          axis.title.x = element_text(size = 16, face = "bold"),      
+          axis.title.y = element_text(size = 20, face = "bold"),     
+          legend.title = element_text(size = 14, face = "bold"),      
+          legend.text = element_text(size = 12)    ) +
+    scale_color_manual(values =  c("red", custom_colors)) +
+    scale_linetype_manual(values = c("dotdash" = "dotdash", "solid" = "solid")) +
+    guides(color = guide_legend(ncol = 6), linetype = "none")
+  
+  gg_b_unique <- ggplot(b_final_20, aes(x = age, y = value, 
+                                        group = `HL degree`, 
+                                        color = `HL degree`)) +
+    geom_line(aes(linetype = ifelse(`HL degree` == "Overall",
+                                    "dotdash", "solid")),
+              size = 1.5) + 
+    labs(title = "",
+         x = "Age",
+         y = expression(beta),
+         color = paste(type)) +
+    theme_bw() +  
+    theme(legend.position = "bottom",
+          plot.background = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.text = element_text(color = 'black'),
+          strip.background = element_rect(fill = 'white'),
+          axis.title.x = element_text(size = 16, face = "bold"),      
+          axis.title.y = element_text(size = 20, face = "bold"),     
+          legend.title = element_text(size = 14, face = "bold"),      
+          legend.text = element_text(size = 12)    ) +
+    scale_color_manual(values =  c("red", custom_colors)) +
+    scale_linetype_manual(values = c("dotdash" = "dotdash", "solid" = "solid")) +
+    guides(color = guide_legend(ncol = 6), linetype = "none")
+  
+  
+  # Function to create enhanced plot
+  create_enhanced_plot <- function(data, x_var, y_var,
+                                   facet_var = NULL,
+                                   log_scale = FALSE) {
+    p <- ggplot(data, aes(x = !!sym(x_var), y = !!sym(y_var), 
+                          group = `HL degree`, color = `HL degree`)) +
+      geom_smooth(aes(linetype = ifelse(`HL degree` == "Overall", "dotdash", "solid")),
+                  method = "loess", se = TRUE, alpha = 0.2, size = 0.9) +
+      geom_point(size = 1.5, alpha = 0.7) +
+      labs(color = paste(type)) +
+      theme_minimal(base_size = 14) +  
+      theme(legend.position = "bottom",
+            plot.background = element_rect(fill = "white", color = NA),
+            panel.grid.major = element_line(color = "gray90"),
+            panel.grid.minor = element_blank(),
+            strip.text = element_text(color = 'black', face = "bold"),
+            strip.background = element_rect(fill = 'white', color = "black"),
+            axis.title = element_text(face = "bold"),
+            legend.title = element_text(face = "bold"),
+            plot.title = element_text(hjust = 0.5, size = 18, face = "bold")) +
+      scale_color_manual(values = c("red", custom_colors)) +
+      scale_linetype_manual(values = c("dotdash" = "dotdash", "solid" = "solid")) +
+      guides(color = guide_legend(ncol = 6), linetype = "none")
+    
+    if (!is.null(facet_var)) {
+      p <- p + facet_wrap(as.formula(paste("~", facet_var)), 
+                          scales = "fixed",
+                          #scales = "free",
+                          ncol = 5)
+    }
+    
+    if (x_var == "frequency") {
+      p <- p + theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for frequency plots
+    }
+    
+    return(p)
+  }
+  
+  # Create enhanced plots
+  gg_k <- create_enhanced_plot(k_final, "frequency", "value", "treshold") +
+    labs(title = "Kappa Coefficients Across Frequencies",
+         x = "Frequency (Hz)",
+         y = expression(kappa))
+  
+  gg_k_unique <- create_enhanced_plot(k_final_20, "frequency", "value") +
+    labs(title = "Kappa Coefficients Across Frequencies (20% Threshold)",
+         x = "Frequency (Hz)",
+         y = expression(kappa))
+  
+  gg_a <- create_enhanced_plot(a_final, "age", "value", "treshold") +
+    labs(title = "Alpha Coefficients Across Ages",
+         x = "Age",
+         y = expression(alpha))
+  
+  gg_a_unique <- create_enhanced_plot(a_final_20, "age", "value") +
+    labs(title = "Alpha Coefficients Across Ages (20% Threshold)",
+         x = "Age",
+         y = expression(alpha))
+  
+  gg_b <- create_enhanced_plot(b_final, "age", "value", "treshold") +
+    labs(title = "Beta Coefficients Across Ages",
+         x = "Age",
+         y = expression(beta))
+  
+  gg_b_unique <- create_enhanced_plot(b_final_20, "age", "value") +
+    labs(title = "Beta Coefficients Across Ages (20% Threshold)",
+         x = "Age",
+         y = expression(beta))
+  
   
   return(list(gg_k, gg_a, gg_b,
               b_final, 

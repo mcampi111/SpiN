@@ -23,11 +23,11 @@ library(tseries)
 # SET DIRECTORY AND READ FILE #
 ###############################
 
-source("./code/utils.R")
+source("/Users/mcampi/Desktop/Hung_Joanna/code/utils.R")
 
-mydir <- "./data/"
-mydir2 <- "./code/"
-mydir_figs <- "./figs/"
+mydir <- "/Users/mcampi/Desktop/Hung_Joanna/data/"
+mydir2 <- "/Users/mcampi/Desktop/Hung_Joanna/code/"
+mydir_figs <- "/Users/mcampi/Desktop/Hung_Joanna/code/figs/"
 
 result <- prepare_data(mydir, mydir2, mydir_figs)
 
@@ -170,6 +170,7 @@ mse_hl = do.call(cbind,
                           1, sum) ))
 colnames(mse_hl) = freq_tresh_plot
 mse_hl = as.data.frame(mse_hl)
+#mse_hl$age_group = sapply(strsplit(age_group_var, "-"), function(x) as.numeric(x[1]))
 mse_hl$age_group = age_group_var
 
 

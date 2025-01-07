@@ -19,16 +19,19 @@ library(kableExtra)
 library(lmtest)
 library(tseries)
 library(geomtextpath)
+library(colorspace)
+library(forcats)
+library(ggh4x)
 
 ###############################
 # SET DIRECTORY AND READ FILE #
 ###############################
 
-source("./utils.R")
+source("/Users/mcampi/Desktop/Hung_Joanna/code/utils.R")
 
-mydir <- "./data/"
-mydir2 <- "./code/"
-mydir_figs <- "./code/figs/"
+mydir <- "/Users/mcampi/Desktop/Hung_Joanna/data/"
+mydir2 <- "/Users/mcampi/Desktop/Hung_Joanna/code/"
+mydir_figs <- "/Users/mcampi/Desktop/Hung_Joanna/code/figs/"
 
 result <- prepare_data(mydir, mydir2, mydir_figs)
 
@@ -43,26 +46,123 @@ age_var = "age_group2" #"age_group" #"age_group2"   "age_group3"
 age_group_var = age_groups2 #all_age_groups #age_groups2  age_groups
 n_age = length(age_group_var)
 
+#####################
+# PRELIMINARY PLOTS #
+#####################
+
+data_long <- data_lee_carter %>%
+pivot_longer(
+  cols = starts_with("FREQ_"), 
+  names_to = "Frequency",
+  values_to = "Value"
+) %>%
+  mutate(Frequency = gsub("FREQ_(.*)_L", "\\1", Frequency))
+
+# Melt the dataframe to long format for easier plotting
+# Convert freq_tresh to a dataframe if it's not already
+if(!is.data.frame(freq_tresh)) {
+  if(is.matrix(freq_tresh)) {
+    freq_tresh_df <- as.data.frame(freq_tresh)
+  } else if(is.vector(freq_tresh)) {
+    freq_tresh_df <- data.frame(Threshold = freq_tresh)
+  } else {
+    stop("Unsupported type for freq_tresh. Please check its structure.")
+  }
+  rownames(freq_tresh_df) <- freq_vector
+} else {
+  freq_tresh_df <- freq_tresh
+}
+
+print(head(freq_tresh_df))
+
+# Create the exceeding empirical quantile by freq OVERALL
+exceedplot_overall <- create_plot2()
+# Display the plot
+print(exceedplot_overall)
+
+
+# Create the exceeding empirical quantile by freq HL
+exceedplot_hl <- create_plot3()
+# Display the plot
+print(exceedplot_hl)
+
+ggsave(filename = paste0(mydir_figs,"exceedplot_overall", ".pdf"), 
+      plot = exceedplot_overall,
+      width = 12,
+      height = 9)
+
+ggsave(filename = paste0(mydir_figs,"exceedplot_hl", ".pdf"), 
+       plot = exceedplot_hl,
+       width = 12,
+       height = 9)
+
+
+all_data = cbind(data_lee_carter, spiq[,c(3)],spin[,c(3)])
+
+# Call the function
+exceedplot_srt_snr <- create_plot4()
+exceedplot_srt_snr
+
+
+# Call the function
+exceedplot_hl_srt_snr <- create_plot5()
+
+# Display the plot
+print(exceedplot_hl_srt_snr)
+
+
+ggsave(filename = paste0(mydir_figs,"exceedplot_overall_snr_srt", ".pdf"), 
+       plot = exceedplot_srt_snr,
+       width = 12,
+       height = 9)
+
+ggsave(filename = paste0(mydir_figs,"exceedplot_hl_snr_srt", ".pdf"), 
+       plot = exceedplot_hl_srt_snr,
+       width = 12,
+       height = 9)
+
 
 #########################################
 # DATA Prep.& Hearing Rates Construction#
 #########################################
 
-hr_counts = process_data(data_lee_carter, 
-                         freq_tresh, 
-                         age_group_var = age_var,
-                         n_tresh, n_age,
-                         n_hlclasses,
-                         process_func = process_matrix_countsonly)
+# hr_counts = process_data(data_lee_carter, 
+#                          freq_tresh, 
+#                          age_group_var = age_var,
+#                          n_tresh, n_age,
+#                          n_hlclasses,
+#                          process_func = process_matrix_countsonly)
+# 
+# 
+# totals_count = process_data(data_lee_carter, 
+#                             freq_tresh, 
+#                             age_group_var = age_var,
+#                             n_tresh, n_age,
+#                             n_hlclasses,
+#                             process_func = process_matrix_totals)
 
+# Create n_totals
+n_totals <- table(data_lee_carter$age_group2)
+names(n_totals) <- names(table(data_lee_carter$age_group2))
+
+# Verify the names and values
+print(n_totals)
 
 totals_count = process_data(data_lee_carter, 
                             freq_tresh, 
                             age_group_var = age_var,
                             n_tresh, n_age,
                             n_hlclasses,
-                            process_func = process_matrix_totals)
+                            process_func = process_matrix_totals,
+                            n_totals = as.numeric(n_totals))
 
+hr_counts = process_data(data_lee_carter, 
+                            freq_tresh, 
+                            age_group_var = age_var,
+                            n_tresh, n_age,
+                            n_hlclasses,
+                            process_func = process_matrix_countsonly,
+                            n_totals = as.numeric(n_totals))
 
 
 hr_rates <- process_data(data_lee_carter, 
@@ -70,7 +170,8 @@ hr_rates <- process_data(data_lee_carter,
                          age_group_var = age_var,
                          n_tresh, n_age,
                          n_hlclasses,
-                         process_func = process_matrix2)
+                         process_func = process_matrix2,
+                         n_totals = as.numeric(n_totals))
 
 hr_rates_interp <- recursive_interpolation(hr_rates)
 
@@ -79,19 +180,48 @@ spiq_rates = process_data(spiq,
                           treshold_SPIQ, 
                           age_group_var = age_var,
                           n_tresh, n_age,
-                          n_hlclasses)
+                          n_hlclasses,
+                          process_func = process_matrix,
+                          n_totals = as.numeric(n_totals))
 
 spin_rates = process_data(spin, 
                           treshold_SPIN, 
                           age_group_var = age_var,
                           n_tresh, n_age,
-                          n_hlclasses)
+                          n_hlclasses,
+                          process_func = process_matrix,
+                          n_totals = as.numeric(n_totals))
 
 saveRDS(totals_count, file = paste(mydir, "totals_count_5y.rds" , sep ="") )
 saveRDS(hr_rates_interp, file = paste(mydir, "hr_rates_interp_5y.rds" , sep ="") )
 saveRDS(spiq_rates, file = paste(mydir, "spiq_rates_5y.rds" , sep ="") )
 saveRDS(spin_rates, file = paste(mydir, "spin_rates_5y.rds" , sep ="") )
 
+
+
+# Define the divisor
+N_tot <- 48144
+
+# Create a new list with each entry divided by 48144
+totals_count_adjusted <- lapply(totals_count, function(sublist) {
+  lapply(sublist, function(inner_list) {
+    if (is.list(inner_list)) {
+      # Handle deeper nested lists
+      lapply(inner_list, function(matrix) matrix / N_tot)
+    } else {
+      # Handle non-nested matrices
+      inner_list / N_tot
+    }
+  })
+})
+
+
+# Perform the multiplication
+hr_rates_interp_adjusted <- multiply_lists(hr_rates_interp, 
+                                           totals_count_adjusted)
+
+spiq_rates_adjusted <- multiply_lists(spiq_rates, totals_count_adjusted)
+spin_rates_adjusted <- multiply_lists(spin_rates, totals_count_adjusted)
 
 ####################
 # Plot Proportions #
@@ -119,6 +249,33 @@ plots_hr_rates2 = plot_hr_rates2(hr_rates_interp,
 plots_hr_rates2[[1]]
 plots_hr_rates2[[2]]
 plots_hr_rates2[[3]]
+
+
+
+plots_hr_rates_adjusted = plot_hr_rates(hr_rates_interp_adjusted,
+                               hl_classes, 
+                               n_tresh,
+                               age_group_var,
+                               freq_tresh, 
+                               sex_classes) 
+
+plots_hr_rates_adjusted[[1]]
+plots_hr_rates_adjusted[[2]]
+plots_hr_rates_adjusted[[3]]
+
+
+
+plots_hr_rates2_adjusted = plot_hr_rates2(hr_rates_interp_adjusted,
+                                 hl_classes, 
+                                 n_tresh,
+                                 age_group_var,
+                                 freq_tresh, 
+                                 sex_classes) 
+
+plots_hr_rates2_adjusted[[1]]
+plots_hr_rates2_adjusted[[2]]
+plots_hr_rates2_adjusted[[3]]
+
 
 
 for (i in 1:n_tresh) {
@@ -214,6 +371,20 @@ plots_spiq_rates2[[3]]
 
 
 
+plots_spiq_rates2_adjusted = plot_speech_rates2(spiq_rates_adjusted,
+                                       hl_classes, 
+                                       n_tresh,
+                                       age_group_var,
+                                       treshold_SPIQ,
+                                       "SpiQ",
+                                       sex_classes) 
+
+plots_spiq_rates2_adjusted[[1]]
+plots_spiq_rates2_adjusted[[2]]
+plots_spiq_rates2_adjusted[[3]]
+
+
+
 for (i in 1:n_tresh) {
   # Modify the file name/path as needed
   ggsave(filename = paste0(mydir_figs,"spiq_r_age_", i, ".pdf"), 
@@ -247,6 +418,19 @@ plots_spin_rates = plot_speech_rates(spin_rates,
 plots_spin_rates[[1]]
 plots_spin_rates[[2]]
 plots_spin_rates[[3]]
+
+
+plots_spin_rates_adjusted = plot_speech_rates(spin_rates_adjusted,
+                                     hl_classes, 
+                                     n_tresh,
+                                     age_group_var,
+                                     treshold_SPIN,
+                                     "SpiN",
+                                     sex_classes ) 
+
+plots_spin_rates_adjusted[[1]]
+plots_spin_rates_adjusted[[2]]
+plots_spin_rates_adjusted[[3]]
 
 
 for (i in 1:n_tresh) {
@@ -338,7 +522,8 @@ ggsave(filename = paste0(mydir_figs,"heat_sex", ".pdf"),
 
 
 
-polar_heatmaps_rates = plot_polar_heatmaps(hr_rates_interp,spiq_rates, spin_rates,
+polar_heatmaps_rates = plot_polar_heatmaps(hr_rates_interp,
+                                           spiq_rates, spin_rates,
                     hl_classes, freq_vector, n_tresh,
                     age_group_var, freq_tresh,
                     freq_tresh_plot, sex_classes  )
@@ -368,6 +553,19 @@ ggsave(filename = paste0(mydir_figs,"heatpolar_altogether", ".pdf"),
        height = 15)
 
 
+polar_heatmaps_rates_adjusted = plot_polar_heatmaps_adjusted(
+                                           hr_rates_interp_adjusted,
+                                           spiq_rates_adjusted, 
+                                           spin_rates_adjusted,
+                                           hl_classes, freq_vector, n_tresh,
+                                           age_group_var, freq_tresh,
+                                           freq_tresh_plot, sex_classes  )
+
+ggsave(filename = paste0(mydir_figs,"heatpolar_altogether_adjusted", ".pdf"), 
+       plot = polar_heatmaps_rates_adjusted[[4]],
+       width = 13,
+       height = 15)
+
 
 ###############
 ###############
@@ -380,7 +578,7 @@ ggsave(filename = paste0(mydir_figs,"heatpolar_altogether", ".pdf"),
 #######################
 
 demodata_byhl = lapply(1:n_tresh, function(i)
-  demogdata(data = hr_rates_interp[[1]][[i]],
+  demogdata(data = hr_rates_interp[[1]][[i]],   #hr_rates_interp_adjusted
             pop = matrix(rep(totals_count[[1]][[i]], each = 11), ncol = 11, byrow = TRUE),
             ages = sapply(strsplit(age_group_var, "-"), function(x) as.numeric(x[1])),
             years = as.numeric(freq_vector),
@@ -500,7 +698,7 @@ ggsave(filename = paste0(mydir_figs,"bikappa_age", ".pdf"),
 
 demodata_by_age_hl = lapply(1:n_tresh, function(i)
   lapply(1:n_hlclasses, function(j)
-    demogdata(data = hr_rates_interp[[2]][[i]][[j]],
+    demogdata(data = hr_rates_interp[[2]][[i]][[j]], #hr_rates_interp_adjusted
               pop = matrix(rep(totals_count[[2]][[i]][[j]], each = 11), ncol = 11, byrow = TRUE),
               ages = sapply(strsplit(age_group_var, "-"), function(x) as.numeric(x[1])),
               years = as.numeric(freq_vector),
@@ -648,7 +846,7 @@ ggsave(filename = paste0(mydir_figs,"bikappa_age_hl", ".pdf"),
 
 demodata_by_age_sex = lapply(1:n_tresh, function(i)
   lapply(1:2, function(j)
-    demogdata(data = hr_rates_interp[[3]][[i]][[j]],
+    demogdata(data = hr_rates_interp[[3]][[i]][[j]], #hr_rates_interp_adjusted
               pop = matrix(rep(totals_count[[3]][[i]][[j]], each = 11), ncol = 11, byrow = TRUE),
               ages = sapply(strsplit(age_group_var, "-"), function(x) as.numeric(x[1])),
               years = as.numeric(freq_vector),
@@ -790,6 +988,7 @@ ggsave(filename = paste0(mydir_figs,"bikappa_age_sex", ".pdf"),
 
 #By HL
 
+#STANDARD
 gg_risk_profiles = plot_coeff_all(model_hl, model_by_age_hl, 
                                   n_tresh, n_hlclasses, hl_classes,
                                   age_group_var ,
@@ -803,6 +1002,22 @@ gg_risk_profiles_count = plot_coeff_all(model_hl_counts, model_by_age_hl_counts,
                                         freq_tresh_plot, freq_vector,
                                         hearing_loss_col,
                                         "Hearing Loss")
+
+#FANCY
+gg_risk_profiles = plot_coeff_all2(model_hl, model_by_age_hl, 
+                                  n_tresh, n_hlclasses, hl_classes,
+                                  age_group_var ,
+                                  freq_tresh_plot, freq_vector,
+                                  hearing_loss_col,
+                                  "Hearing Loss")
+
+gg_risk_profiles_count = plot_coeff_all2(model_hl_counts, model_by_age_hl_counts, 
+                                        n_tresh, n_hlclasses, hl_classes,
+                                        age_group_var ,
+                                        freq_tresh_plot, freq_vector,
+                                        hearing_loss_col,
+                                        "Hearing Loss")
+
 
 
 ggsave(filename = paste0(mydir_figs,"b_risk", ".pdf"), 
@@ -830,12 +1045,30 @@ ggsave(filename = paste0(mydir_figs,"k_risk", ".pdf"),
 
 bg_color <- "#f0f0f0"
 
+#CENTERED ALPHA
 combined_risk <- (gg_risk_profiles[[2]] / gg_risk_profiles[[3]] / gg_risk_profiles[[1]]) + 
   plot_layout(heights = c(1, 1, 1),
               guides = 'collect') &
   theme(legend.position = "bottom")
 
+#NOT CENTERED ALPHA
+combined_risk <- (gg_risk_profiles_count[[2]] / gg_risk_profiles[[3]] / gg_risk_profiles[[1]]) + 
+  plot_layout(heights = c(1, 1, 1),
+              guides = 'collect') &
+  theme(legend.position = "bottom")
+
+
+#STANDARD
 ggsave(filename = paste0(mydir_figs,"risk_profiles", ".pdf"), 
+       plot = combined_risk,
+       width = 10,
+       height = 9,
+       device = "pdf",
+       units = "in", dpi = 300,
+       bg = bg_color)
+
+#FANCY
+ggsave(filename = paste0(mydir_figs,"risk_profiles_fancy", ".pdf"), 
        plot = combined_risk,
        width = 10,
        height = 9,
@@ -845,8 +1078,10 @@ ggsave(filename = paste0(mydir_figs,"risk_profiles", ".pdf"),
 
 
 
-combined_risk_unique <- (gg_risk_profiles[[8]] + gg_risk_profiles[[7]]) +
-  plot_layout(ncol = 2, guides = "collect") & theme(legend.position = "bottom")
+combined_risk_unique <- (gg_risk_profiles[[8]] + labs(title = "Alphas") +
+                          gg_risk_profiles[[7]]) +labs(title = "Kappas") +
+  gg_risk_profiles[[9]]  + labs(title = "Betas") +
+  plot_layout(ncol = 3, guides = "collect") & theme(legend.position = "bottom")
 
 
 ggsave(filename = paste0(mydir_figs,"risk_profiles_unique_hl", ".pdf"), 
@@ -875,6 +1110,21 @@ gg_risk_profiles_count_sex = plot_coeff_all(model_hl_counts, model_by_age_sex_co
                                         c("pink","blue"),
                                         "Sex")
 
+
+gg_risk_profiles_sex = plot_coeff_all2(model_hl, model_by_age_sex, 
+                                      n_tresh, 2, c("Female", "Male"),
+                                      age_group_var ,
+                                      freq_tresh_plot, freq_vector,
+                                      c("pink","blue"),
+                                      "Sex")
+
+gg_risk_profiles_count_sex = plot_coeff_all2(model_hl_counts, model_by_age_sex_counts, 
+                                            n_tresh, 2, c("Female", "Male"),
+                                            age_group_var ,
+                                            freq_tresh_plot, freq_vector,
+                                            c("pink","blue"),
+                                            "Sex")
+
 ggsave(filename = paste0(mydir_figs,"b_risk_sex", ".pdf"), 
        plot = gg_risk_profiles_sex[[3]],
        width = 8,
@@ -900,12 +1150,30 @@ ggsave(filename = paste0(mydir_figs,"k_risk_sex", ".pdf"),
 
 bg_color <- "#f0f0f0"
 
+#CENTERED ALPHA
 combined_risk_sex <- (gg_risk_profiles_sex[[2]] / gg_risk_profiles_sex[[3]] / gg_risk_profiles_sex[[1]]) + 
   plot_layout(heights = c(1, 1, 1),
               guides = 'collect') &
   theme(legend.position = "bottom")
 
+#NOT CENTERED ALPHA
+combined_risk_sex <- (gg_risk_profiles_count_sex[[2]] / gg_risk_profiles_sex[[3]] / gg_risk_profiles_sex[[1]]) + 
+  plot_layout(heights = c(1, 1, 1),
+              guides = 'collect') &
+  theme(legend.position = "bottom")
+
+#Standard
 ggsave(filename = paste0(mydir_figs,"risk_profiles_sex", ".pdf"), 
+       plot = combined_risk_sex,
+       width = 10,
+       height = 9,
+       device = "pdf",
+       units = "in", dpi = 300,
+       bg = bg_color)
+
+
+#Fancy
+ggsave(filename = paste0(mydir_figs,"risk_profiles_sex_fancy", ".pdf"), 
        plot = combined_risk_sex,
        width = 10,
        height = 9,
@@ -916,6 +1184,12 @@ ggsave(filename = paste0(mydir_figs,"risk_profiles_sex", ".pdf"),
 
 
 combined_risk_unique_sex <- (gg_risk_profiles_sex[[8]] + gg_risk_profiles_sex[[9]] + gg_risk_profiles_sex[[7]]) +
+  plot_layout(ncol = 3, guides = "collect") & theme(legend.position = "bottom")
+
+
+combined_risk_unique_sex <- (gg_risk_profiles_sex[[8]] + labs(title = "Alphas") +
+                               gg_risk_profiles_sex[[7]]) +labs(title = "Kappas") +
+  gg_risk_profiles_sex[[9]]  + labs(title = "Betas") +
   plot_layout(ncol = 3, guides = "collect") & theme(legend.position = "bottom")
 
 
