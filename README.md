@@ -1,5 +1,5 @@
 # SpiN
-Repository with data and code of the paper **"Standardised Hearing Loss Risk Profiles with State-Space Models"** available at..
+Repository with data and code of the paper **"Standardised Hearing Loss Risk Profiles with State-Space Models"** available at https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5085963
 
 ## **Abstract**
 
@@ -46,11 +46,11 @@ All the figure implemented through R are provided in this folder. The code used 
 
 If you use this code in your project, please cite:
 
-@article{..,
-  title={..},
-  author={..},
-  journal={..},
-  year={..}
+@article{campi2025standardised,
+  title={Standardised Hearing Loss Risk Profiles with State-Space Models},
+  author={Campi, Marta and Peters, Gareth and Morvan, Perrine and Buhl, Mareike and Thai-Van, Hung},
+  journal={Available at SSRN 5085963},
+  year={2025}
 }
 
 
