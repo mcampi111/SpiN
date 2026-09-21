@@ -1,7 +1,8 @@
 # SpiN — Standardised hearing-loss risk profiles with state-space models
 
-Code for *Standardised Hearing Loss Risk Profiles with State-Space Models*
-(Campi, Peters, Morvan, Buhl, Thai-Van; [SSRN 5085963](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5085963)).
+Code for Campi, Peters, Morvan, Buhl & Thai-Van (2025), *Standardised hearing loss risk
+profiles with state-space models*, **Mathematics in Medical and Life Sciences** 2(1), 2535979.
+[doi:10.1080/29937574.2025.2535979](https://doi.org/10.1080/29937574.2025.2535979) (open access).
 
 Pure-tone audiometry alone misses much of what hearing loss does to speech perception.
 This project builds **population-level reference profiles** of hearing-loss risk by age,
@@ -49,13 +50,17 @@ script.
 
 ```bibtex
 @article{campi2025standardised,
-  title   = {Standardised Hearing Loss Risk Profiles with State-Space Models},
-  author  = {Campi, Marta and Peters, Gareth and Morvan, Perrine and Buhl, Mareike and Thai-Van, Hung},
-  journal = {Available at SSRN 5085963},
-  year    = {2025}
+  title   = {Standardised hearing loss risk profiles with state-space models},
+  author  = {Campi, Marta and Peters, Gareth W. and Morvan, Perrine and Buhl, Mareike and Thai-Van, Hung},
+  journal = {Mathematics in Medical and Life Sciences},
+  volume  = {2},
+  number  = {1},
+  pages   = {2535979},
+  year    = {2025},
+  doi     = {10.1080/29937574.2025.2535979}
 }
 ```
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Code: MIT — see [LICENSE](LICENSE).
